@@ -18,7 +18,7 @@ module.exports = {
             // showDefaults: true
         },
         // The default site for your app. This value will be used when a siteRef could not be determined from the url
-        defaultSite: '102aaf73-1c75-4bff-8593-3fcb596dc870',
+        defaultSite: 'RefArch',
         // Provide aliases for your sites. These will be used in place of your site id when generating paths throughout the application.
         // siteAliases: {
         //     RefArch: 'us'
@@ -32,7 +32,7 @@ module.exports = {
                 clientId: '18e59516-2d33-438a-9727-37d261133de7',
                 organizationId: 'f_ecom_zyhf_006',
                 shortCode: 'kv7kzm78',
-                siteId: '102aaf73-1c75-4bff-8593-3fcb596dc870'
+                siteId: 'RefArch',
             }
         },
         // Einstein api config
