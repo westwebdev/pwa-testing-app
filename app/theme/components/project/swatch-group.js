@@ -50,16 +50,6 @@ export default {
                 },
                 _active: {
                     background: 'transparent'
-                },
-                _before: {
-                    content: '""',
-                    display: `${props.disabled ? 'block' : 'none'}`,
-                    position: 'absolute',
-                    height: 11,
-                    width: '1px',
-                    transform: 'rotate(45deg)',
-                    backgroundColor: 'black',
-                    zIndex: 1
                 }
             },
             swatchButton: {
@@ -72,6 +62,16 @@ export default {
                 opacity: 1,
                 _focus: {
                     outline: 'none'
+                },
+                _before: {
+                    content: '""',
+                    display: `${props.disabled ? 'block' : 'none'}`,
+                    position: 'absolute',
+                    height: 8,
+                    width: '1px',
+                    transform: 'rotate(45deg)',
+                    backgroundColor: 'black',
+                    zIndex: 1
                 }
             }
         }),

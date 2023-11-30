@@ -5,7 +5,7 @@
  * For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
  */
 
-import React, {useState} from 'react'
+import React, {useEffect, useState} from 'react'
 import PropTypes from 'prop-types'
 import {HeartIcon, HeartSolidIcon} from '@salesforce/retail-react-app/app/components/icons'
 
@@ -28,7 +28,7 @@ import {useIntl} from 'react-intl'
 import {productUrlBuilder} from '@salesforce/retail-react-app/app/utils/url'
 import Link from '@salesforce/retail-react-app/app/components/link'
 import withRegistration from '@salesforce/retail-react-app/app/components/with-registration'
-import {useCurrency} from '@salesforce/retail-react-app/app/hooks'
+import {useCurrency, useVariationParams} from '@salesforce/retail-react-app/app/hooks'
 
 const IconButtonWithRegistration = withRegistration(IconButton)
 
@@ -50,6 +50,11 @@ export const Skeleton = () => {
     )
 }
 
+import { useProduct } from '@salesforce/commerce-sdk-react'
+import { useVariationAttributes } from '@salesforce/retail-react-app/app/hooks/use-variation-attributes'
+import Swatch from '@salesforce/retail-react-app/app/components/swatch-group/swatch'
+import { findImageGroupBy } from '@salesforce/retail-react-app/app/utils/image-groups-utils'
+
 /**
  * The ProductTile is a simple visual representation of a
  * product object. It will show it's default image, name and price.
@@ -66,7 +71,13 @@ const ProductTile = (props) => {
         ...rest
     } = props
 
-    const {currency, image, price, productId, hitType} = product
+    const {hitType} = product;
+    const [productId, setProductId] = useState(product.productId);
+    const [image, setImage] = useState(product.image);
+    const [price, setPrice] = useState(product.price);
+    const [currency, setCurrency] = useState(product.currency);
+    const [swatchesParams, setSwatchesParams] = useState({});
+    const [isMounted, setIsMounted] = useState(false);
 
     // ProductTile is used by two components, RecommendedProducts and ProductList.
     // RecommendedProducts provides a localized product name as `name` and non-localized product
@@ -77,6 +88,64 @@ const ProductTile = (props) => {
     const {currency: activeCurrency} = useCurrency()
     const [isFavouriteLoading, setFavouriteLoading] = useState(false)
     const styles = useMultiStyleConfig('ProductTile')
+
+    const { data: fullProduct } = useProduct(
+        {
+            parameters: {
+                id: productId,
+                allImages: true
+            }
+        },
+        {
+            keepPreviousData: true
+        }
+    );
+
+    const productAttributes = useVariationAttributes(fullProduct)
+    const isAttributeSelected = (currentValue, selectedValue) => {
+        return selectedValue?.value === currentValue;
+    }
+
+    const changeTileImage = (swatchesParams) => {
+        const groupedImages = findImageGroupBy(fullProduct.imageGroups, {
+            viewType: 'large',
+            selectedVariationAttributes: swatchesParams
+        });
+
+        setImage(groupedImages?.images[0])
+    }
+
+    useEffect(() => {
+        if (isMounted) {
+            const isOnlyColor = Object.keys(swatchesParams).every(key => key.toLowerCase() === 'color');
+            const variationObj = isOnlyColor && fullProduct.variationGroups ? fullProduct.variationGroups : fullProduct.variants;
+            const targetPID = variationObj.find(item => {
+                const { variationValues } = item;
+
+                return Object.entries(swatchesParams).every(([key, value]) => {
+                    return variationValues[key] === value;
+                })
+            })?.productId;
+
+            setProductId(targetPID)
+        }
+    }, [swatchesParams])
+
+    useEffect(() => {
+        if (isMounted) {
+            changeTileImage(swatchesParams);
+            setPrice(fullProduct.price);
+            setCurrency(fullProduct.currency);
+        }
+    }, [productId])
+
+    const handleAttributeChange = (swatchesValue, swatchesName) => {
+        setSwatchesParams({...swatchesParams, [swatchesName]: swatchesValue});
+    }
+
+    useEffect(() => {
+        setIsMounted(true)
+    });
 
     return (
         <Link
@@ -125,6 +194,51 @@ const ProductTile = (props) => {
                     </Box>
                 )}
             </Box>
+            {/* Attributes */}
+            {
+                <Box>
+                    {
+                        productAttributes.length && productAttributes.map((attr) => {
+                            const {id, name, selectedValue, values = []} = attr
+                            const attrName = name.toLowerCase();
+                            return (
+                                <Box key={id}>
+                                    {values.map(
+                                        ({href, name, image, value, orderable}) => {
+                                        return (
+                                            <Swatch
+                                                key={value}
+                                                href={href}
+                                                disabled={!orderable}
+                                                value={value}
+                                                name={name}
+                                                variant={attrName === 'color' ? 'circle' : 'square'}
+                                                selected={isAttributeSelected(value, selectedValue)}
+                                                onChange={() => handleAttributeChange(value, attrName)}
+                                            >
+                                                {image ? (
+                                                    <Box
+                                                        height="100%"
+                                                        width="100%"
+                                                        minWidth="32px"
+                                                        backgroundRepeat="no-repeat"
+                                                        backgroundSize="cover"
+                                                        backgroundColor={name.toLowerCase()}
+                                                        backgroundImage={image ? `url(${image.disBaseLink || image.link})` : ''}
+                                                    />
+                                                ) : (
+                                                    name
+                                                )}
+                                            </Swatch>
+                                            )
+                                        }
+                                    )}
+                                </Box>
+                            );
+                        })
+                    }
+                </Box>
+            }
 
             {/* Title */}
             <Text {...styles.title}>{localizedProductName}</Text>
